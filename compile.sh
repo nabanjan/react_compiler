@@ -16,7 +16,6 @@ fi
 echo "Success: All $# arguments are valid."
 
 npm install
-npm run build
 
 rm -rf $2
 mkdir -p $2
