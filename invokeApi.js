@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "node:path";
+import { exit } from "node:process";
 
 
 
@@ -90,6 +91,8 @@ function writeFilesFromDelimitedString(input, delim, baseDir = process.cwd()) {
 
 async function main() {
   try {
+    console.log("Reached here and openai key is:", process.env.OPENAI_API_KEY);
+    exit(0);
     // Using the 2025 Responses API (recommended)
     const argsInput = getCommandLineString();
     let inputText = argsInput;
@@ -137,13 +140,14 @@ async function main() {
         console.error("Could not read file/directory:", e);
       }
     }
-
+    
     // If no API key present, print the prepared input instead of calling the API (handy for debugging)
     if (!process.env.OPENAI_API_KEY) {
       console.log("Prepared input (no OPENAI_API_KEY set):");
       if (!inputText) {
         console.log("<empty input>");
       } else {
+        console.log("Found open api key:", process.env.OPENAI_API_KEY);
         console.log(inputText.slice(0, 2000));
         if (inputText.length > 2000) console.log("\n...[truncated] (length=" + inputText.length + ")");
       }

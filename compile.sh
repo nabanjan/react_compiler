@@ -31,6 +31,8 @@ done
 
 echo "Starting to translating source files from $1 to $2"
 
+echo `env`
+
 node index.js $1 $2
 if [ $? -eq 1 ]; then
   echo "Error: Command specifically returned 1" >&2
@@ -44,6 +46,8 @@ echo "Done compiling source files from $1 to $2"
 
 export $(grep -v '^#' .env | xargs)
 pwd=$(pwd)
+env && exit 0
+
 node invokeApi.js "Recreate the React project files here again." $2
 node invokeApi.js "Do npm install and npm run dev, and fix the errors." $2
 node invokeApi.js "Remove duplicate files." $2
