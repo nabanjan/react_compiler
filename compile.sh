@@ -7,6 +7,23 @@ usage() {
     exit 1
 }
 
+copy_project_files() {
+    local src_root="$1"
+    local dest_root="$2"
+
+    while IFS= read -r -d '' src_file; do
+        local rel_path="${src_file#"$src_root"/}"
+        local dest_file="$dest_root/$rel_path"
+
+        mkdir -p "$(dirname "$dest_file")"
+        cp "$src_file" "$dest_file"
+    done < <(
+        find "$src_root" \
+            \( -path "$src_root/node_modules" -o -path "$src_root/.git" -o -path "$src_root/dist" -o -path "$src_root/build" \) -prune -o \
+            -type f \( -name '*.json' -o -name '*.html' -o -name 'tsconfig.json' \) -print0
+    )
+}
+
 # 1. Check for the number of arguments
 if [ "$#" -eq 0 ]; then
     echo "Error: No arguments provided."
@@ -38,9 +55,7 @@ if [ $? -eq 1 ]; then
   echo "Error: Command specifically returned 1" >&2
   exit 1
 fi
-cp $1/package.json $2/package.json
-cp $1/tsconfig.json $2/tsconfig.json
-cp $1/*.html $2/
+copy_project_files "$1" "$2"
 
 echo "Done compiling source files from $1 to $2"
 
