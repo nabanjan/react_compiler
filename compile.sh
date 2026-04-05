@@ -8,8 +8,8 @@ usage() {
 }
 
 copy_project_files() {
-    local src_root="$1"
-    local dest_root="$2"
+    local src_root="${1%/}"
+    local dest_root="${2%/}"
     local count=0
 
     while IFS= read -r -d '' src_file; do
@@ -21,8 +21,10 @@ copy_project_files() {
         count=$((count + 1))
     done < <(
         find "$src_root" \
-            \( -path "$src_root/node_modules" -o -path "$src_root/.git" -o -path "$src_root/dist" -o -path "$src_root/build" \) -prune -o \
-            -type f \( -name '*.json' -o -name '*.html' -o -name 'tsconfig.json' \) -print0
+            \( -path "$src_root/node_modules" -o -path "$src_root/.git" -o -path "$src_root/dist" \
+               -o -name "dto" -o -name "components" -o -name "hooks" \
+               -o -name "pages" -o -name "utils" \) -prune -o \
+            -type f -print0
     )
 
     echo "Copied $count project file(s) to $dest_root"
@@ -59,15 +61,16 @@ if [ $? -eq 1 ]; then
   echo "Error: Command specifically returned 1" >&2
   exit 1
 fi
-copy_project_files "$1" "$2"
-
-echo "Done compiling source files from $1 to $2"
 
 export $(grep -v '^#' .env | xargs)
 pwd=$(pwd)
-env && exit 0
 
 node invokeApi.js "Recreate the React project files here again." $2
 node invokeApi.js "Do npm install and npm run dev, and fix the errors." $2
+
+copy_project_files "$1" "$2"
+echo "Done compiling source files from $1 to $2"
+
 node invokeApi.js "Remove duplicate files." $2
+
 cd $pwd

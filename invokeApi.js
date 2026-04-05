@@ -92,7 +92,6 @@ function writeFilesFromDelimitedString(input, delim, baseDir = process.cwd()) {
 async function main() {
   try {
     console.log("Reached here and openai key is:", process.env.OPENAI_API_KEY);
-    exit(0);
     // Using the 2025 Responses API (recommended)
     const argsInput = getCommandLineString();
     let inputText = argsInput;
