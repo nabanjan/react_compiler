@@ -1,9 +1,6 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "node:path";
-import { exit } from "node:process";
-
-
 
 function getCommandLineString() {
     const args = process.argv;
@@ -34,46 +31,61 @@ function writeFiles(baseDir, files) {
  * --- relative/file/path ---
  * <file contents>
  */
-function extractFileBlock(block, delim) {
-  const firstLineEnd = block.indexOf(delim);
-  if (firstLineEnd === -1) return null;
+function normalizeRelativeFilePath(filePath) {
+  const normalized = filePath.trim().replace(/\\/g, "/");
 
-  const filePath = block.slice(0, firstLineEnd).trim();
-  const content = block.slice(firstLineEnd + delim.length).replace(/^\n/, "");
+  if (!normalized) return null;
+  if (path.isAbsolute(normalized)) return null;
+  if (normalized.includes("\0") || normalized.includes("\n")) return null;
 
-  if (!filePath) return null;
-  return { filePath, content };
+  const cleaned = path.posix.normalize(normalized);
+  if (cleaned === "." || cleaned === ".." || cleaned.startsWith("../")) return null;
+
+  const baseName = path.posix.basename(cleaned);
+  const hasRecognizedName =
+    baseName.includes(".") ||
+    ["Dockerfile", "Makefile", "Procfile"].includes(baseName);
+
+  if (!hasRecognizedName) return null;
+  return cleaned;
 }
 
-function extractMarkdownBlock(block) {
-  const headerMatch = block.match(/^\s*###\s+`([^`]+)`/m);
-  if (!headerMatch) return null;
-  const filePath = headerMatch[1].trim();
-  if (!filePath) return null;
+function extractDelimitedFiles(input) {
+  const files = [];
+  const seenPaths = new Set();
+  const patterns = [
+    /(?:^|\n)---\s+([^\n]+?)\s+---\n([\s\S]*?)(?=\n---\s+[^\n]+?\s+---\n|$)/g,
+    /(?:^|\n)###\s+`([^`]+)`\s*\n```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g,
+  ];
 
-  const fenceMatch = block.match(/```[a-zA-Z0-9_-]*\n([\s\S]*?)```/m);
-  if (!fenceMatch) return null;
-  const content = fenceMatch[1].replace(/\n$/, "");
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      const filePath = normalizeRelativeFilePath(match[1]);
+      if (!filePath || seenPaths.has(filePath)) {
+        continue;
+      }
 
-  return { filePath, content };
-}
-
-function writeFilesFromDelimitedString(input, delim, baseDir = process.cwd()) {
-  const fileBlocks = input.split(/^---\s*$/gm).filter(Boolean);
-
-  for (const block of fileBlocks) {
-    console.log("Processing block:\n", block.slice(0, 100) + (block.length > 100 ? "\n...[truncated]" : ""));
-    const extracted =
-      extractFileBlock(block, delim) ||
-      extractMarkdownBlock(block);
-
-    if (!extracted) {
-      console.warn("Skipping block; could not parse file path/content.");
-      continue;
+      seenPaths.add(filePath);
+      files.push({
+        filePath,
+        content: match[2].replace(/\n$/, ""),
+      });
     }
+  }
 
-    const { filePath, content } = extracted;
+  return files;
+}
 
+function writeFilesFromDelimitedString(input, baseDir = process.cwd()) {
+  const files = extractDelimitedFiles(input);
+
+  if (files.length === 0) {
+    console.warn("No parsable file blocks found in model output.");
+    return;
+  }
+
+  for (const { filePath, content } of files) {
     const absolutePath = path.join(baseDir, filePath);
     const dir = path.dirname(absolutePath);
 
@@ -91,7 +103,6 @@ function writeFilesFromDelimitedString(input, delim, baseDir = process.cwd()) {
 
 async function main() {
   try {
-    console.log("Reached here and openai key is:", process.env.OPENAI_API_KEY);
     // Using the 2025 Responses API (recommended)
     const argsInput = getCommandLineString();
     let inputText = argsInput;
@@ -146,7 +157,6 @@ async function main() {
       if (!inputText) {
         console.log("<empty input>");
       } else {
-        console.log("Found open api key:", process.env.OPENAI_API_KEY);
         console.log(inputText.slice(0, 2000));
         if (inputText.length > 2000) console.log("\n...[truncated] (length=" + inputText.length + ")");
       }
@@ -169,7 +179,7 @@ async function main() {
 
     outputText = response.output_text;
     console.log(outputText);
-    writeFilesFromDelimitedString(outputText, "###", process.argv[3]);
+    writeFilesFromDelimitedString(outputText, process.argv[3]);
     console.log("API call completed successfully and files written to : " + process.argv[3]);
   } catch (error) {
     console.error("Error calling API:", error);

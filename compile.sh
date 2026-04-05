@@ -21,9 +21,7 @@ copy_project_files() {
         count=$((count + 1))
     done < <(
         find "$src_root" \
-            \( -path "$src_root/node_modules" -o -path "$src_root/.git" -o -path "$src_root/dist" \
-               -o -name "dto" -o -name "components" -o -name "hooks" \
-               -o -name "pages" -o -name "utils" \) -prune -o \
+            \( -path "$src_root/node_modules" -o -path "$src_root/.git" -o -path "$src_root/dist" \) -prune -o \
             -type f -print0
     )
 
@@ -40,8 +38,8 @@ echo "Success: All $# arguments are valid."
 
 npm install
 
-rm -rf $2
-mkdir -p $2
+rm -rf "$2"
+mkdir -p "$2"
 
 
 # 2. Check that all parameters are directories
@@ -54,8 +52,6 @@ done
 
 echo "Starting to translating source files from $1 to $2"
 
-echo `env`
-
 node index.js $1 $2
 if [ $? -eq 1 ]; then
   echo "Error: Command specifically returned 1" >&2
@@ -65,12 +61,7 @@ fi
 export $(grep -v '^#' .env | xargs)
 pwd=$(pwd)
 
-node invokeApi.js "Recreate the React project files here again." $2
-node invokeApi.js "Do npm install and npm run dev, and fix the errors." $2
-
 copy_project_files "$1" "$2"
 echo "Done compiling source files from $1 to $2"
-
-node invokeApi.js "Remove duplicate files." $2
 
 cd $pwd
