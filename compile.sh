@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Define a function to display usage instructions
 usage() {
@@ -10,6 +10,7 @@ usage() {
 copy_project_files() {
     local src_root="$1"
     local dest_root="$2"
+    local count=0
 
     while IFS= read -r -d '' src_file; do
         local rel_path="${src_file#"$src_root"/}"
@@ -17,11 +18,14 @@ copy_project_files() {
 
         mkdir -p "$(dirname "$dest_file")"
         cp "$src_file" "$dest_file"
+        count=$((count + 1))
     done < <(
         find "$src_root" \
             \( -path "$src_root/node_modules" -o -path "$src_root/.git" -o -path "$src_root/dist" -o -path "$src_root/build" \) -prune -o \
             -type f \( -name '*.json' -o -name '*.html' -o -name 'tsconfig.json' \) -print0
     )
+
+    echo "Copied $count project file(s) to $dest_root"
 }
 
 # 1. Check for the number of arguments
