@@ -1,12 +1,20 @@
 #!/bin/bash -x
 
-if [ "$#" -ne 1 ]; then
+usage() {
     { set +x; } 2>/dev/null
     echo "Usage: $0 <source-repo-path>"
     echo "  Output is written to: <script-dir>/../output/<repo-name>-refactored"
     echo "  Example: $0 ../my-react-app"
     echo "           Output -> $(cd "$(dirname "$0")/../output" 2>/dev/null && pwd)/my-react-app-refactored"
     exit 1
+}
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    usage
+fi
+
+if [ "$#" -ne 1 ]; then
+    usage
 fi
 
 src="$1"
