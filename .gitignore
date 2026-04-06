@@ -20,6 +20,8 @@ pnpm-debug.log*
 # Temporary files
 .tmp/
 tmp/
+tmp-cra-locktest/
+tmp-cra-test/
 *.tmp
 *.swp
 
